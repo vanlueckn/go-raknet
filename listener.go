@@ -266,7 +266,7 @@ func (listener *Listener) handleUnconnectedPing(b *bytes.Buffer, addr net.Addr) 
 		return fmt.Errorf("error reading unconnected ping: %v", err)
 	}
 	b.Reset()
-
+	println("UNCONNECTED PING FROM" + addr.String())
 	(&message.UnconnectedPong{ServerGUID: listener.id, SendTimestamp: pk.SendTimestamp, Data: listener.pongData.Load().([]byte)}).Write(b)
 	_, err := listener.conn.WriteTo(b.Bytes(), addr)
 	return err
