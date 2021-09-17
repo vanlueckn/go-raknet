@@ -2,8 +2,9 @@ package raknet
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
-	"github.com/sandertv/go-raknet/internal/message"
 	"log"
 	"math"
 	"math/rand"
@@ -12,6 +13,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/sandertv/go-raknet/internal/message"
+	"github.com/sethvargo/go-limiter/memorystore"
 )
 
 // ListenConfig may be used to pass additional configuration to a Listener.
@@ -20,6 +24,13 @@ type ListenConfig struct {
 	// simply discards the messages.
 	ErrorLog *log.Logger
 }
+
+var LimiterStore, _ = memorystore.New(&memorystore.Config{
+	// Number of tokens allowed per interval.
+	Tokens: 5,
+	// Interval until tokens reset.
+	Interval: time.Second,
+})
 
 // Listener implements a RakNet connection listener. It follows the same methods as those implemented by the
 // TCPListener in the net package.
@@ -266,9 +277,13 @@ func (listener *Listener) handleUnconnectedPing(b *bytes.Buffer, addr net.Addr) 
 		return fmt.Errorf("error reading unconnected ping: %v", err)
 	}
 	b.Reset()
-	println("UNCONNECTED PING FROM" + addr.String())
+	_, _, _, ok, err := LimiterStore.Take(context.Background(), addr.String())
+	if err != nil || !ok {
+		return errors.New("Ratelimit reached")
+	}
+
 	(&message.UnconnectedPong{ServerGUID: listener.id, SendTimestamp: pk.SendTimestamp, Data: listener.pongData.Load().([]byte)}).Write(b)
-	_, err := listener.conn.WriteTo(b.Bytes(), addr)
+	_, err = listener.conn.WriteTo(b.Bytes(), addr)
 	return err
 }
 
