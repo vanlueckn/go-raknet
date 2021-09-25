@@ -69,7 +69,7 @@ var listenerID = rand.New(rand.NewSource(time.Now().Unix())).Int63()
 // Specific features of the listener may be modified once it is returned, such as the used log and/or the
 // accepted protocol.
 func (l ListenConfig) Listen(address string) (*Listener, error) {
-	conn, err := net.ListenPacket("udp", address)
+	conn, err := net.ListenPacket("udp4", address)
 	if err != nil {
 		return nil, &net.OpError{Op: "listen", Net: "raknet", Source: nil, Addr: nil, Err: err}
 	}
